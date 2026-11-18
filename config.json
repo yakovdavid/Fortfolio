@@ -1,0 +1,53 @@
+{
+  "system_config": {
+    "app_name": "Fortfolio",
+    "version": "2.0.0",
+    "base_currency": "ILS",
+    "market_data_cache_ttl_minutes": 15
+  },
+  "liquidity_rules": {
+    "excluded_funds_ils": 30000.0,
+    "operational_cash_buffer_ils": 1500.0,
+    "margin_trading_allowed": false,
+    "commission_drag_limit_percent": 0.5
+  },
+  "allocation_dna": {
+    "protocol": "70/20/10",
+    "drift_threshold_percent": 2.5,
+    "core_shield_trigger_percent": -5.0,
+    "layers": {
+      "Core": {
+        "target_weight": 70.0,
+        "strategy": "Buy and Hold",
+        "technical_stop_loss": null,
+        "fundamental_audit_trigger": null
+      },
+      "Satellites": {
+        "target_weight": 20.0,
+        "strategy": "Macro Trends",
+        "technical_stop_loss": {
+          "type": "Trailing Stop",
+          "value_percent": 12.0
+        },
+        "fundamental_audit_trigger": null
+      },
+      "Quality": {
+        "target_weight": 10.0,
+        "strategy": "Value and Moat",
+        "technical_stop_loss": null,
+        "fundamental_audit_trigger": {
+          "type": "Drawdown from 52W High",
+          "value_percent": 15.0
+        }
+      }
+    }
+  },
+  "ambush_radar_rules": {
+    "entry_trigger_drawdown_percent": 7.0,
+    "macro_indicator_readonly": "SMA200"
+  },
+  "concentration_limits": {
+    "single_asset_hard_cap_percent": 5.0,
+    "sector_warning_threshold_percent": 30.0
+  }
+}

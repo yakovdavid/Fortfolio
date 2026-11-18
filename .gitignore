@@ -1,0 +1,14 @@
+# Environments
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+venv/
+env/
+*.pyc
+
+# Node / Expo (for the frontend)
+node_modules/
+.expo/

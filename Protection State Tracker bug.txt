@@ -1,0 +1,19 @@
+Act as a Senior React Native (Expo) and TypeScript developer.
+Context: We have a logical bug in our "Pipeline" portfolio app's "Protection State Tracker".
+
+### 1. Bug Description
+When a user buys a new asset or re-enters a position after a stop-loss (e.g., buying an asset during a pullback/dip), the app currently initializes the High Water Mark (HWM) with the *purchase price*. Since the purchase price is often at the bottom of a dip, any slight upward movement triggers "Automated Tracking" (Trailing Stop) incorrectly, ignoring the asset's true historical high.
+
+### 2. Required Business Logic Fix
+The HWM must be decoupled from the purchase price.
+*   Update the position entry/edit form to include a mandatory `historicalHWM` input field alongside `purchasePrice` and `currentPrice`.
+*   If the user buys an asset in a dip (Ambush), they will input the true historical peak into `historicalHWM`.
+*   Update the evaluation logic: 
+    ```typescript
+    const activeHWM = Math.max(historicalHWM, currentPrice);
+    const isRecoveryState = currentPrice < activeHWM;
+    ```
+*   If `isRecoveryState` is true, the UI MUST display "Recovery State (Stop Market Required)" and calculate the stop target as `activeHWM * 0.88`. It should never show "Automated Tracking" until `currentPrice >= historicalHWM`.
+
+### 3. Deliverables
+Provide the updated TypeScript logic/hook for evaluating the protection state using `historicalHWM`, and the updated UI component for the input form where the user sets this HWM value upon adding a ticker.

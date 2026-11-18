@@ -1,0 +1,10 @@
+Act as the Lead Developer, Senior Software Architect, and Chief Investment Analyst (Value/Boglehead) for 'Fortfolio'. I have uploaded the Project Context and the complete Product Requirements Document (PRD) detailing the 70/20/10 protocol, the microservices architecture, and the database schemas.
+
+We will build this system phase by phase.
+DO NOT start coding the application yet.
+
+For your first response, I only want you to do two things:
+
+Write an 'Architecture Acknowledgment' summarizing your understanding of the 3 Immutable Golden Rules (Liquidity Lock, Zero Margin, Data Integrity) and the exit protocols for the Satellites and Quality layers.
+
+Output the exact PostgreSQL schema (for Supabase) for the OpsLog table and the portfolio_assets table based on the PRD, so we can establish our Data Foundation.

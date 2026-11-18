@@ -1,0 +1,44 @@
+Claude, I need you to safely update my financial pipeline Python script. 
+The goal is to add an "Anomaly News Fetcher" using the `yfinance` library. This module will check if a stock has moved >= 4% today, and if so, fetch the latest 3 news headlines to explain the movement.
+
+Please follow these exact steps:
+
+1. IMPORT: Ensure `import yfinance as yf` is at the top of the file.
+
+2. NEW FUNCTION: Inject the following standalone function near the top of the script (after the imports/globals):
+
+def fetch_anomaly_news(ticker_symbol, threshold=0.04):
+    try:
+        ticker = yf.Ticker(ticker_symbol)
+        hist = ticker.history(period="5d")
+        if len(hist) < 2:
+            return ""
+        
+        prev_close = hist['Close'].iloc[-2]
+        current_price = hist['Close'].iloc[-1]
+        pct_change = (current_price - prev_close) / prev_close
+        
+        if abs(pct_change) >= threshold:
+            direction = "CRASH" if pct_change < 0 else "SURGE"
+            news_data = ticker.news
+            if not news_data:
+                return f"  -> [ANOMALY: {direction} {abs(pct_change)*100:.1f}%] No recent news found."
+                
+            headlines = [article.get('title', 'No Title') for article in news_data[:3]]
+            news_str = " | ".join(headlines)
+            return f"  -> [ANOMALY: {direction} {abs(pct_change)*100:.1f}%] NEWS: {news_str}"
+            
+        return ""
+    except Exception as e:
+        return f"  -> [NEWS FETCH ERROR] Could not fetch data for {ticker_symbol}: {str(e)}"
+
+3. INTEGRATION: Locate the print loops in my script where the output for the "PORTFOLIO", "QUALITY", and "AMBUSH RADAR" sections are generated (where it prints the Price, SMA50, SMA200, etc.).
+Immediately after the `print(...)` statement that outputs a specific stock's data, add the following logic:
+
+anomaly_report = fetch_anomaly_news(ticker, threshold=0.04) # Make sure to pass the correct ticker variable used in the loop
+if anomaly_report:
+    print(anomaly_report)
+
+4. SAFETY CHECK: Review your changes to ensure Python indentation is perfectly preserved and no existing logic is broken. 
+
+Please go ahead and apply these changes.

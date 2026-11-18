@@ -1,0 +1,35 @@
+Act as a Senior React Native (Expo) and TypeScript developer.
+Context: Architectural Roadmap and Strategic Pivot for the "Pipeline" App.
+
+Please read and acknowledge this strategic update. I do NOT need you to write any code yet. Just confirm your understanding of our roadmap and the updated investment philosophy.
+
+### The Strategic Pivot: Moving to Institutional Grade
+We are transitioning the app from a technical-only tracker with free-text allocations to an Institutional Grade system. Free-text allocations are an engineering risk because they allow philosophical contradictions (e.g., trying to run a passive-aggressive 80/0/20 portfolio using heavy infrastructure dividend stocks as the sole Quality driver). 
+
+To fix this, we are locking the architecture into strict templates and introducing Fundamental Risk tracking alongside Technical Risk.
+
+### Updated "Fortress" Investment Constitution
+1. **Strict Templates, Not Percentages:** Users will select predefined strategic templates (e.g., Tactical Momentum 70/20/10, Hyper-Quality 80/0/20).
+2. **Dynamic Quality Thresholds:** The required ROIC for the Quality layer changes based on the template:
+   - *Tactical (70/20/10):* ROIC > 8% (Allows heavy infrastructure like KMI, CNI, because Satellites provide the Alpha).
+   - *Hyper-Quality (80/0/20):* ROIC > 15% (Satellites are 0%, so the Quality layer must drive Alpha via Capital Light compounders like V, MA).
+3. **Fundamental Alerts:** The app will actively monitor business performance, not just price action. If a stock's ROIC drops below the active template's threshold, it triggers a red `[FUNDAMENTAL DEGRADATION]` alert.
+4. **Single Source of Truth:** We are abandoning basic APIs (like Yahoo Finance) for fundamental metrics, as their ROIC calculations (often Net Income based) are distorted. We will integrate Financial Modeling Prep (FMP) to pull accurate, NOPAT-based TTM data.
+
+### The Development Roadmap (Upcoming Phases)
+This is our execution plan moving forward:
+
+*   **Phase 1: Fundamental Data Engine (FMP Integration)**
+    *   Build `fmp-service.ts` to fetch real-time, accurate `ROIC` and `Gross Profit Margin` via the FMP API (`EXPO_PUBLIC_FMP_API_KEY`).
+    *   Create a robust TypeScript interface and a React Query hook (`useFundamentalData`) to cache this data.
+
+*   **Phase 2: Template Architecture (UI & State Refactor)**
+    *   Refactor `target-allocation-store.ts` to use strict enums (`TACTICAL_MOMENTUM`, `HYPER_QUALITY`, `ABSOLUTE_PASSIVE`) instead of raw percentages.
+    *   Replace the current free-text UI with a `TemplateSelectorModal` featuring predefined strategic cards.
+    *   Update the JSON backup schema to sync the active template.
+
+*   **Phase 3: Alert Engine & Radar Filtering**
+    *   Update the Portfolio UI to display persistent `[FUNDAMENTAL DEGRADATION]` badges if a Quality asset's live ROIC (from Phase 1) fails the current template's requirement (from Phase 2).
+    *   Update the Ambush Radar to strictly reject (Invalidate) Quality layer candidates that do not meet the active template's ROIC threshold.
+
+Please confirm you understand this roadmap, the reasoning behind abandoning free-text percentages, and the critical importance of Phase 1 (Data) preceding Phase 2 (UI). Do not generate code yet.

@@ -1,0 +1,49 @@
+# 🛡️ המבצר (The Fortress) - Investment Management System
+
+## 1. חזון ואסטרטגיה (Vision & Strategy)
+אפליקציית ניהול השקעות מבוססת AI המיועדת לניהול תיק "המבצר".
+- **פילוסופיה:** שילוב של Buffett (איכות וחפיר כלכלי) ו-Bogle (פיזור ומדדים).
+- **מודל הקצאה (75/20/5):**
+  - **75% Core:** מדדים רחבים (VOO, QQQM).
+  - **20% Satellites:** סקטורים ספציפיים (URA, XME, CIBR, ITA, FENY).
+  - **5% Quality:** מניות ערך ואיכות עם ROIC גבוה וחפיר כלכלי (BRK.B, WM, ARYT, CNI).
+
+---
+
+## 2. ארכיטקטורה טכנית (Technical Architecture)
+- **שפת פיתוח:** Python.
+- **סביבת עבודה:** VS Code.
+- **מסד נתונים:** Relational DB (SQL) לניהול נכסים ועסקאות.
+- **אינטגרציה:** חיבור ל-API של Yahoo Finance למחירי שוק ומאקרו.
+- **מודל עבודה:** מודולרי (Agile) - הפרדה בין מנוע חישובי לממשק AI.
+
+---
+
+## 3. רכיבי ליבה (System Modules)
+1. **Allocation Engine (DLD 1.0):** מנוע לניתוח סטיות מהמודל וחיבור פקודות קנייה (Limit Orders).
+2. **The Ambush Module:** "צייד אנומליות" טכני לניצול עיוותי מחיר זמניים בנכסי איכות (Mean Reversion).
+3. **Horizon Review (EHA/LHO):** ניתוח אופק כלכלי - מאקרו עולמי (EHA) ומקומי ישראל (LHO).
+4. **Quality Checker:** ניתוח פונדמנטלי עמוק (ROIC, Moat, DCF).
+5. **Currency & Dividends:** ניהול חשיפת מט"ח ותחזית תזרים מזומנים.
+
+---
+
+## 4. פרוטוקול פקודות (Operational Commands)
+| פקודה | תיאור |
+| :--- | :--- |
+| `!הפקדה [סכום]` | הפעלת מנוע הקצאה וחישוב קניות. |
+| `!EHA` | סקירת מאקרו גלובלית (Economic Horizon Analysis). |
+| `!LHO` | סקירת זירה מקומית ישראל (Local Horizon Observer). |
+| `!Ambush` | הפעלת סורק אנומליות טכני על שכבת האיכות. |
+| `!ניתוח_עומק [Symbol]` | הפקת דוח איכות מלא לנכס. |
+| `!אפיון [Component]` | יצירת מסמך DLD טכני לרכיב חדש. |
+
+---
+
+## 5. מצב פיתוח (Roadmap)
+- [x] אפיון אסטרטגי ומודל הקצאה.
+- [x] הגדרת מבנה תיקיות וטכנולוגיות.
+- [x] DLD 1.0: Allocation Engine.
+- [x] Feature Spec: Ambush Module.
+- [ ] Backend: חיבור ל-Data Stream (Yahoo Finance).
+- [ ] Master Prompt: הטמעת לוגיקת המפקד (The Commander).
