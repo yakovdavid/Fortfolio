@@ -1,0 +1,51 @@
+## Table `portfolio_assets`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `ticker` | `varchar` |  Unique |
+| `asset_layer` | `varchar` |  |
+| `quantity` | `numeric` |  |
+| `current_price` | `numeric` |  |
+| `high_52_week` | `numeric` |  |
+| `trailing_stop_price` | `numeric` |  Nullable |
+| `currency` | `varchar` |  |
+| `calibration_factor` | `numeric` |  Nullable |
+| `updated_at` | `timestamptz` |  |
+
+## Table `ops_log`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `entry_id` | `uuid` | Primary |
+| `timestamp` | `timestamptz` |  |
+| `transaction_type` | `varchar` |  |
+| `asset_symbol` | `varchar` |  |
+| `quantity` | `numeric` |  |
+| `price_per_unit` | `numeric` |  |
+| `total_amount` | `numeric` |  |
+| `currency` | `varchar` |  |
+| `fx_rate` | `numeric` |  Nullable |
+| `fee` | `numeric` |  Nullable |
+| `memo` | `text` |  Nullable |
+
+## Table `trade_journal`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `ticker` | `varchar` |  |
+| `action_type` | `varchar` |  Nullable |
+| `asset_layer` | `varchar` |  |
+| `execution_price` | `numeric` |  |
+| `quantity` | `numeric` |  |
+| `algorithm_snapshot` | `jsonb` |  |
+| `trigger_reason` | `varchar` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+

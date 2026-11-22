@@ -12,12 +12,22 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # --- Supabase (service role bypasses RLS; backend is a trusted service) ---
+    # --- Supabase ---
     supabase_url: str = ""
+    # Service role: used ONLY by internal jobs (DSVE sync, watermarks). Bypasses RLS.
     supabase_service_role_key: str = ""
+    # Publishable (anon) key: used for end-user reads, combined with the
+    # user's own JWT so Row Level Security applies (defense in depth).
+    supabase_anon_key: str = ""
+    # Optional. Set ONLY if the project still signs tokens with the legacy
+    # HS256 shared secret. Projects on asymmetric signing keys verify via JWKS.
+    supabase_jwt_secret: str = ""
 
-    # --- API protection for mutating/data endpoints (X-API-Key header) ---
-    backend_api_key: str = "change-me"
+    # --- Internal service-to-service auth (X-API-Key). Never ship to clients. ---
+    backend_api_key: str = ""
+
+    # --- CORS (Expo web / dev). Comma-separated origins; empty = no browser access. ---
+    cors_allowed_origins: str = ""
 
     # --- Market data / DSVE ---
     market_data_ttl_minutes: int = 15      # Golden Rule #3: freshness window
@@ -29,6 +39,11 @@ class Settings(BaseSettings):
     # Python weekday: Monday=0 ... Saturday=5. Saturday is after both the
     # TASE weekly close (Thursday) and the US weekly close (Friday).
     watermark_update_weekday: int = 5
+
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [o.strip() for o in self.cors_allowed_origins.split(",") if o.strip()]
 
 
 @lru_cache

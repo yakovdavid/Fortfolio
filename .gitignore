@@ -6,9 +6,33 @@
 # Python
 __pycache__/
 venv/
+.venv/
 env/
 *.pyc
+.pytest_cache/
 
 # Node / Expo (for the frontend)
 node_modules/
 .expo/
+dist/
+web-build/
+
+# Native signing material
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Local secret notes - never commit (keys belong in backend/.env)
+*API Keys*.txt
+*api_keys*
+*secrets*
+
+# Local archive (approved: archive stays outside the repo)
+Archive/

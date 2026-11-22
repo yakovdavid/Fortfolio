@@ -143,7 +143,7 @@ class DSVE:
         ))
         profiles: List[dict] = await _db(lambda: (
             sb.table("risk_profiles")
-              .select("asset_id,peak_price,peak_updated_at,stop_override_pct")
+              .select("asset_id,peak_price,peak_updated_at,stop_override_pct,protection_state")
               .execute().data
         ))
         stop_by_layer = {(l["user_id"], l["layer_code"]): l["trailing_stop_pct"] for l in layers}
@@ -158,6 +158,10 @@ class DSVE:
             )
             if effective_stop is None:
                 continue  # layer has no trailing stop (Core / Quality)
+            if profile.get("protection_state") != "TRAILING":
+                # RECOVERY: the stop is locked at entry_price*(1-stop%) and the
+                # peak is irrelevant until the breakout latch fires (DB trigger).
+                continue
 
             updated_at = profile.get("peak_updated_at")
             if updated_at and not force:
@@ -198,16 +202,16 @@ class DSVE:
 
     # ------------------------------------------------------------------ #
     # 3. READ MODELS (valuation is computed by the SQL view)             #
+    #    `sb` is the caller's RLS-scoped client (get_user_supabase); the  #
+    #    explicit user_id filter is a second, independent guard.          #
     # ------------------------------------------------------------------ #
-    async def get_metrics(self, user_id: str) -> List[dict]:
-        sb = get_supabase()
+    async def get_metrics(self, sb, user_id: str) -> List[dict]:
         return await _db(lambda: (
             sb.table("ui_pipeline_metrics").select("*").eq("user_id", user_id).execute().data
         ))
 
-    async def get_cash_balances(self, user_id: str) -> Dict[str, float]:
+    async def get_cash_balances(self, sb, user_id: str) -> Dict[str, float]:
         """Ledger-derived cash per currency (fn_cash_balance in PostgreSQL)."""
-        sb = get_supabase()
         rows: List[dict] = await _db(lambda: (
             sb.table("ops_log").select("currency,transaction_type,asset_symbol")
               .eq("user_id", user_id).execute().data
@@ -223,12 +227,11 @@ class DSVE:
             balances[currency] = float(value or 0)
         return balances
 
-    async def get_buying_power(self, user_id: str) -> Dict[str, Any]:
+    async def get_buying_power(self, sb, user_id: str) -> Dict[str, Any]:
         """GOLDEN RULE #1 read model: cash minus the emergency reserve
         (system liquidity constraint - configurable, never hardcoded).
         The authoritative enforcement remains the database trigger."""
-        sb = get_supabase()
-        balances = await self.get_cash_balances(user_id)
+        balances = await self.get_cash_balances(sb, user_id)
         settings_rows: List[dict] = await _db(lambda: (
             sb.table("user_settings")
               .select("emergency_reserve_amount,emergency_reserve_currency,operational_cash_buffer,base_currency")
@@ -257,11 +260,12 @@ class DSVE:
             "cash_oxygen_ok": (reserve_ccy_cash - reserve) >= buffer_floor,
         }
 
-    async def get_summary(self, user_id: str) -> Dict[str, Any]:
+    async def get_summary(self, sb, user_id: str) -> Dict[str, Any]:
         """Dashboard aggregate: totals, per-layer weights/drift vs the
-        generic DNA, defense alerts, cash and buying power."""
-        metrics = await self.get_metrics(user_id)
-        cash = await self.get_buying_power(user_id)
+        generic DNA, defense alerts, cash and buying power.
+        Weights use capital = invested + available cash (reserve excluded)."""
+        metrics = await self.get_metrics(sb, user_id)
+        cash = await self.get_buying_power(sb, user_id)
 
         layers: Dict[str, dict] = {}
         for row in metrics:
@@ -278,13 +282,26 @@ class DSVE:
             layer["asset_count"] += 1
 
         alerts = [
-            {"ticker": r["ticker"], "layer_code": r["layer_code"], "status": r["defense_status"]}
+            {
+                "ticker": r["ticker"],
+                "layer_code": r["layer_code"],
+                "status": r["defense_status"],
+                "protection_state": r.get("protection_state"),
+                "stop_order_type": r.get("stop_order_type"),
+                "stop_price": r.get("stop_price"),
+                "alert_trigger_price": r.get("alert_trigger_price"),
+            }
             for r in metrics if r["defense_status"] != "HOLD"
         ]
+        first = metrics[0] if metrics else {}
         return {
             "user_id": user_id,
-            "base_currency": metrics[0]["base_currency"] if metrics else None,
-            "portfolio_value_base": metrics[0]["portfolio_value_base"] if metrics else 0,
+            "base_currency": first.get("base_currency"),
+            # capital = invested + available cash (emergency reserve excluded):
+            "portfolio_value_base": first.get("portfolio_value_base", 0),
+            "invested_value_base": first.get("invested_value_base", 0),
+            "available_cash_base": first.get("available_cash_base", 0),
+            "cash_weight_pct": first.get("cash_weight_pct", 0),
             "layers": sorted(layers.values(), key=lambda l: -float(l["target_weight_pct"] or 0)),
             "defense_alerts": alerts,
             "stale_assets": [r["ticker"] for r in metrics if r["is_stale"]],

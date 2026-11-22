@@ -1,5 +1,6 @@
 fastapi>=0.111
 uvicorn[standard]>=0.30
-supabase>=2.5
+supabase>=2.20  # 2.20+ handles the new sb_publishable_ / sb_secret_ key format
 yfinance>=0.2.40
 pydantic-settings>=2.2
+PyJWT[crypto]>=2.8

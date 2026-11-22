@@ -1,0 +1,53 @@
+## Table `portfolio_assets`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `ticker` | `varchar` |  Unique |
+| `asset_layer` | `portfolio_layer` |  |
+| `quantity` | `numeric` |  |
+| `average_cost` | `numeric` |  |
+| `current_price` | `numeric` |  |
+| `high_52_week` | `numeric` |  Nullable |
+| `trailing_stop_price` | `numeric` |  Nullable |
+| `currency` | `varchar` |  Nullable |
+| `calibration_factor` | `numeric` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
+| `high_water_mark` | `numeric` |  Nullable |
+| `roic` | `numeric` |  Nullable |
+
+## Table `ambush_radar`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `ticker` | `varchar` | Primary |
+| `asset_type` | `varchar` |  |
+| `source_layer` | `varchar` |  Nullable |
+| `added_at` | `timestamptz` |  |
+
+## Table `quality_metrics`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `ticker` | `varchar` | Primary |
+| `current_price` | `numeric` |  Nullable |
+| `mean_price` | `numeric` |  Nullable |
+| `std_dev` | `numeric` |  Nullable |
+| `z_score` | `numeric` |  Nullable |
+| `roic` | `numeric` |  Nullable |
+| `moat` | `varchar` |  Nullable |
+| `last_updated_stats` | `timestamptz` |  Nullable |
+| `last_updated_fundamentals` | `timestamptz` |  Nullable |
+
+## Custom Types / Enums
+
+### `portfolio_layer`
+
+`core` | `satellite` | `quality`
+

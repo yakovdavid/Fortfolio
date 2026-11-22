@@ -2,37 +2,65 @@
 
 Endpoints:
   GET  /ping                            health check (cold-start prevention, no auth)
-  POST /sync                            manual DSVE market-data sync
-  POST /sync/watermarks?force=false     manual weekly watermark run
-  GET  /portfolio/{user_id}/metrics     ui_pipeline_metrics rows (per asset)
-  GET  /portfolio/{user_id}/summary     dashboard aggregate (layers, drift, alerts, cash)
-  GET  /portfolio/{user_id}/buying-power  Golden Rule #1 read model
-  GET  /quotes/{symbol}                 debug quote (raw + normalized display value)
+
+  End user (Authorization: Bearer <Supabase access token>; identity = JWT sub):
+  GET  /me/metrics                      ui_pipeline_metrics rows (per asset)
+  GET  /me/summary                      dashboard aggregate (layers, drift, alerts, cash)
+  GET  /me/buying-power                 Golden Rule #1 read model
+
+  Internal (X-API-Key, service-to-service only - never from the client):
+  POST /internal/sync                   manual DSVE market-data sync
+  POST /internal/sync/watermarks        manual weekly watermark run (?force=)
+  GET  /internal/quotes/{symbol}        debug quote (raw + normalized display value)
 
 The background scheduler runs the DSVE sync every SYNC_INTERVAL_SECONDS and
 attempts the weekly watermark job each cycle (self-guarded: it only executes
 on the configured weekday and skips fresh watermarks).
 """
 import asyncio
+import hmac
 import logging
 from contextlib import asynccontextmanager
+from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
+from .auth import AuthenticatedUser, AuthError, authenticate
 from .config import get_settings
 from .dsve import dsve
 from .market_data import is_tase_symbol, market_data, normalize_price
+from .supabase_client import get_user_supabase
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger("fortfolio.main")
 
 
 # --------------------------------------------------------------------------- #
-# Auth (simple service-to-service API key)                                    #
+# Auth                                                                        #
 # --------------------------------------------------------------------------- #
 def require_api_key(x_api_key: str = Header(default="")) -> None:
-    if x_api_key != get_settings().backend_api_key:
+    """Internal service-to-service guard. Fails closed if no key is configured."""
+    expected = get_settings().backend_api_key
+    if not expected or not hmac.compare_digest(x_api_key.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
+
+
+async def current_user(authorization: Optional[str] = Header(default=None)) -> AuthenticatedUser:
+    """End-user guard: verified Supabase JWT. The user_id comes from the token only."""
+    settings = get_settings()
+    try:
+        # JWKS lookup may hit the network on a cold key cache - keep it off the loop.
+        return await asyncio.to_thread(
+            authenticate,
+            authorization,
+            supabase_url=settings.supabase_url,
+            jwt_secret=settings.supabase_jwt_secret,
+        )
+    except AuthError as err:
+        raise HTTPException(
+            status_code=401, detail=str(err), headers={"WWW-Authenticate": "Bearer"}
+        ) from err
 
 
 # --------------------------------------------------------------------------- #
@@ -62,7 +90,15 @@ async def lifespan(app: FastAPI):
         task.cancel()
 
 
-app = FastAPI(title="Fortfolio Backend", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="Fortfolio Backend", version="2.1.0", lifespan=lifespan)
+
+if get_settings().cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=get_settings().cors_origins,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -70,44 +106,41 @@ app = FastAPI(title="Fortfolio Backend", version="2.0.0", lifespan=lifespan)
 # --------------------------------------------------------------------------- #
 @app.get("/ping")
 async def ping() -> dict:
-    return {"status": "ok", "service": "fortfolio-backend", "version": "2.0.0"}
+    return {"status": "ok", "service": "fortfolio-backend", "version": "2.1.0"}
 
 
 # --------------------------------------------------------------------------- #
-# DSVE controls                                                               #
+# End-user read models (JWT; RLS-scoped Supabase client)                      #
 # --------------------------------------------------------------------------- #
-@app.post("/sync", dependencies=[Depends(require_api_key)])
+@app.get("/me/metrics")
+async def my_metrics(user: AuthenticatedUser = Depends(current_user)) -> list:
+    return await dsve.get_metrics(get_user_supabase(user.access_token), user.user_id)
+
+
+@app.get("/me/summary")
+async def my_summary(user: AuthenticatedUser = Depends(current_user)) -> dict:
+    return await dsve.get_summary(get_user_supabase(user.access_token), user.user_id)
+
+
+@app.get("/me/buying-power")
+async def my_buying_power(user: AuthenticatedUser = Depends(current_user)) -> dict:
+    return await dsve.get_buying_power(get_user_supabase(user.access_token), user.user_id)
+
+
+# --------------------------------------------------------------------------- #
+# Internal controls (X-API-Key, service-to-service only)                      #
+# --------------------------------------------------------------------------- #
+@app.post("/internal/sync", dependencies=[Depends(require_api_key)])
 async def trigger_sync() -> dict:
     return await dsve.sync_market_data()
 
 
-@app.post("/sync/watermarks", dependencies=[Depends(require_api_key)])
+@app.post("/internal/sync/watermarks", dependencies=[Depends(require_api_key)])
 async def trigger_watermarks(force: bool = Query(default=False)) -> dict:
     return await dsve.update_weekly_watermarks(force=force)
 
 
-# --------------------------------------------------------------------------- #
-# Portfolio read models                                                       #
-# --------------------------------------------------------------------------- #
-@app.get("/portfolio/{user_id}/metrics", dependencies=[Depends(require_api_key)])
-async def portfolio_metrics(user_id: str) -> list:
-    return await dsve.get_metrics(user_id)
-
-
-@app.get("/portfolio/{user_id}/summary", dependencies=[Depends(require_api_key)])
-async def portfolio_summary(user_id: str) -> dict:
-    return await dsve.get_summary(user_id)
-
-
-@app.get("/portfolio/{user_id}/buying-power", dependencies=[Depends(require_api_key)])
-async def portfolio_buying_power(user_id: str) -> dict:
-    return await dsve.get_buying_power(user_id)
-
-
-# --------------------------------------------------------------------------- #
-# Debug quote endpoint                                                        #
-# --------------------------------------------------------------------------- #
-@app.get("/quotes/{symbol}", dependencies=[Depends(require_api_key)])
+@app.get("/internal/quotes/{symbol}", dependencies=[Depends(require_api_key)])
 async def quote(symbol: str) -> dict:
     q = await market_data.get_quote(symbol)
     tase = is_tase_symbol(symbol)
